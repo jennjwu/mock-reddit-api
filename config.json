@@ -1,0 +1,6 @@
+{
+  "mongodb": {
+    "host": "ds261440.mlab.com:61440",
+    "dbName": "jwu-test-reddit"
+  }
+}

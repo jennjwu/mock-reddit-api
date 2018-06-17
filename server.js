@@ -3,6 +3,8 @@
 const PORT = process.env.PORT || 3000;
 var express = require("express");
 var app = express();
+var mongo = require("./mongoConnection");
+
 
 app.get("/", function (req, res) {
     logRequest(req, null);
