@@ -5,7 +5,6 @@ module.exports = {
     parseRedditResults: function(res) {
         var input = JSON.parse(res);
         var result = input.data.children;
-        console.log("got total reddit items", result.length);
 
         var parsedResult = result.map(function(i) {
             return JSON.parse("{" +
@@ -18,5 +17,25 @@ module.exports = {
         });
 
         return parsedResult;
+    },
+
+    fetchFromRedditResults: function(reddit, favoriteList) {
+        var redditResultHashMap = {};
+        for (var i = 0; i < reddit.length; i++) {
+            var redditId = reddit[i].id;
+            redditResultHashMap[redditId] = reddit[i];
+        }
+
+        return favoriteList.map(function(el) {
+            var id = typeof el == "object" ? el.redditId : el;
+            var tag = typeof el == "object" ? el.tag : null;
+
+            var redditRes = redditResultHashMap[id];
+            if (tag != null && redditRes != null) {
+                redditRes.tag = tag;
+            }
+
+            return redditRes;
+        });
     }
 };

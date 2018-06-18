@@ -1,6 +1,8 @@
 "use strict";
 
 const PORT = process.env.PORT || 3000;
+const REDDIT_REQUEST_URL = "https://www.reddit.com/hot.json";
+
 var express = require("express");
 var app = express();
 var mongo = require("./mongoConnection");
@@ -64,8 +66,7 @@ app.get("/reddit", function(req, res) {
     var accessKey = req.header("access-key");
     mongo.auth(accessKey, function(valid) {
         if (valid) {
-            var redditRequestUrl = "https://www.reddit.com/hot.json";
-            var request = https.request(redditRequestUrl, function(response) {
+            var request = https.request(REDDIT_REQUEST_URL, function(response) {
                 var data = "";
                 response.on("data", (chunk) => {
                     data += chunk.toString();
@@ -79,6 +80,74 @@ app.get("/reddit", function(req, res) {
             request.end();
         } else {
             res.status(401).json({"error": "invalid access key"}).end();
+        }
+    });
+});
+
+app.get("/favorites", function(req, res) {
+    logRequest(req, null);
+    var accessKey = req.header("access-key");
+    mongo.auth(accessKey, function(valid) {
+        if (valid) {
+            mongo.getFavorites(accessKey, function(response) {
+                if (response == null) {
+                    res.status(404).json({"error": "no such user found"}).end();
+                } else {
+                    var userFavorites = response;
+
+                    // go to reddit to get details
+                    var request = https.request(REDDIT_REQUEST_URL, function(response) {
+                        var data = "";
+                        response.on("data", (chunk) => {
+                            data += chunk.toString();
+                        });
+                        response.on("end", () => {
+                            var redditRes = helper.parseRedditResults(data);
+                            var augRes = helper.fetchFromRedditResults(redditRes, userFavorites.favorites);
+                            res.status(200).json(augRes).end();
+                        });
+                    });
+
+                    request.end();
+                }
+            });
+        } else {
+            res.status(401).json({"error": "invalid access key"}).end();
+        }
+    });
+});
+
+app.post("/favorites", function(req, res) {
+    var body = "";
+    req.on("data", chunk => {
+        body += chunk.toString();
+    });
+    req.on("end", () => {
+        logRequest(req, body);
+
+        var accessKey = req.header("access-key");
+
+        try {
+            var favorite = JSON.parse(body);
+            if (favorite != null) {
+                mongo.auth(accessKey, function(valid) {
+                    if (valid) {
+                        mongo.saveFavorite(accessKey, favorite, function(response) {
+                            if (response == null) {
+                                res.status(404).json({"error": "no such user found"}).end();
+                            } else {
+                                res.status(201).json({"message": "favorite added successfully"}).end();
+                            }
+                        });
+                    } else {
+                        res.status(401).json({"error": "invalid access key"}).end();
+                    }
+                });
+            } else {
+                res.status(422).json({"error": "favoriteId not provided in body"}).end();
+            }
+        } catch (ex) {
+            res.status(422).json({"error": "invalid body provided"}).end();
         }
     });
 });

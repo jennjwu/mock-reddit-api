@@ -89,6 +89,60 @@ function resetAccessKeyForUser(username, password, next) {
     });
 }
 
+function addFavorite(accessKey, favorite, next) {
+    var db = getDb();
+
+    if (db == null) {
+        console.log("mongo connection not ready yet, please try again in a moment");
+        return null;
+    }
+
+    db.collection('RedditUser', function(err, col) {
+        col.findOne({ accessKey: accessKey }, function(err, doc) {
+            if (doc == null) {
+                console.log("no user with such access key, unauthorized");
+                next(null);
+            } else {
+                var redditId = favorite.redditId;
+                var favoriteTag = favorite.tag;
+
+                if (redditId == null) {
+                    console.log("redditId not provided in body, not saving");
+                    next(null);
+                } else {
+                    col.update({ accessKey: accessKey}, { $push: {favorites: favorite} }, function(err, doc) {
+                        console.log("successfully added", redditId, "to user's favorites");
+                        col.findOne({ accessKey: accessKey }, { favorites: 1, _id: 0 }, function(err, doc) {
+                            next(doc);
+                        });
+                    });
+                }
+            }
+        });
+    });
+}
+
+function getFavorites(accessKey, next) {
+    var db = getDb();
+
+    if (db == null) {
+        console.log("mongo connection not ready yet, please try again in a moment");
+        return null;
+    }
+
+    db.collection('RedditUser', function(err, col) {
+        col.findOne({ accessKey: accessKey }, { favorites: 1, _id: 0 }, function(err, doc) {
+            if (doc == null) {
+                console.log("no user with such access key, unauthorized");
+                next(null);
+            } else {
+                console.log("successfully retrieved user's favorites");
+                next(doc);
+            }
+        });
+    });
+}
+
 function randomString(length) {
     return Math.round((Math.pow(36, length + 1) - Math.random() * Math.pow(36, length))).toString(36).slice(1);
 }
@@ -96,5 +150,7 @@ function randomString(length) {
 module.exports = {
     create: createRedditUser,
     login: resetAccessKeyForUser,
-    auth: validateAccessKey
+    auth: validateAccessKey,
+    getFavorites: getFavorites,
+    saveFavorite: addFavorite
 }
