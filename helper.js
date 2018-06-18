@@ -6,6 +6,8 @@ module.exports = {
         var input = JSON.parse(res);
         var result = input.data.children;
 
+        if (result.length == 0) {return result};
+
         var parsedResult = result.map(function(i) {
             return JSON.parse("{" +
                 '"id": "' + i.data.id + '",' +
@@ -27,15 +29,18 @@ module.exports = {
         }
 
         return favoriteList.map(function(el) {
-            var id = typeof el == "object" ? el.redditId : el;
-            var tag = typeof el == "object" ? el.tag : null;
+            var id = el.redditId;
+            var tag = el.tag;
 
             var redditRes = redditResultHashMap[id];
-            if (tag != null && redditRes != null) {
-                redditRes.tag = tag;
+            if (redditRes != null) {
+                if (tag !=  null) {
+                    redditRes.tag = tag;
+                }
+                return redditRes;
+            } else {
+                return el;
             }
-
-            return redditRes;
         });
     }
 };

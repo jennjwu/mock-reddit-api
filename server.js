@@ -24,13 +24,17 @@ app.post("/users", function(req, res) {
 
         try {
             var requestBody = JSON.parse(body);
-            mongo.create(requestBody.username, requestBody.password, function(response) {
-                if (response == null) {
-                    res.status(500).end();
-                } else {
-                    res.status(200).json({"accessKey": response}).end();
-                }
-            });
+            if (requestBody.username == null || requestBody.password == null) {
+                res.status(422).json({"error": "required username and password fields not provided"}).end();
+            } else {
+                mongo.create(requestBody.username, requestBody.password, function(response) {
+                    if (response == null) {
+                        res.status(500).end();
+                    } else {
+                        res.status(200).json({"accessKey": response}).end();
+                    }
+                });
+            }
         } catch (ex) {
             res.status(422).json({"error": "body cannot be parsed to JSON"}).end();
         }
@@ -47,13 +51,17 @@ app.post("/users/login", function(req, res) {
 
         try {
             var requestBody = JSON.parse(body);
-            mongo.login(requestBody.username, requestBody.password, function(response) {
-                if (response == null) {
-                    res.status(404).json({"error": "no such user found"}).end();
-                } else {
-                    res.status(200).json({"accessKey": response}).end();
-                }
-            });
+            if (requestBody.username == null || requestBody.password == null) {
+                res.status(422).json({"error": "required username and password fields not provided"}).end();
+            } else {
+                mongo.login(requestBody.username, requestBody.password, function(response) {
+                    if (response == null) {
+                        res.status(404).json({"error": "no such user found"}).end();
+                    } else {
+                        res.status(200).json({"accessKey": response}).end();
+                    }
+                });
+            }
         } catch (ex) {
             console.log(ex);
             res.status(422).json({"error": "body cannot be parsed to JSON"}).end();
@@ -72,8 +80,13 @@ app.get("/reddit", function(req, res) {
                     data += chunk.toString();
                 });
                 response.on("end", () => {
-                    var results = helper.parseRedditResults(data);
-                    res.status(200).json(results).end();
+                    try {
+                        var results = helper.parseRedditResults(data);
+                        res.status(200).json(results).end();
+                    } catch(ex) {
+                        console.log(ex);
+                        res.status(500).json({"error": ex.message}).end();
+                    }
                 });
             });
 
@@ -94,21 +107,25 @@ app.get("/favorites", function(req, res) {
                     res.status(404).json({"error": "no such user found"}).end();
                 } else {
                     var userFavorites = response;
-
-                    // go to reddit to get details
-                    var request = https.request(REDDIT_REQUEST_URL, function(response) {
-                        var data = "";
-                        response.on("data", (chunk) => {
-                            data += chunk.toString();
+                    // no favorites
+                    if (userFavorites.favorites == null) {
+                        res.status(200).json([]).end();
+                    } else {
+                        // go to reddit to get details
+                        var request = https.request(REDDIT_REQUEST_URL, function(response) {
+                            var data = "";
+                            response.on("data", (chunk) => {
+                                data += chunk.toString();
+                            });
+                            response.on("end", () => {
+                                var redditRes = helper.parseRedditResults(data);
+                                var augRes = helper.fetchFromRedditResults(redditRes, userFavorites.favorites);
+                                res.status(200).json(augRes).end();
+                            });
                         });
-                        response.on("end", () => {
-                            var redditRes = helper.parseRedditResults(data);
-                            var augRes = helper.fetchFromRedditResults(redditRes, userFavorites.favorites);
-                            res.status(200).json(augRes).end();
-                        });
-                    });
 
-                    request.end();
+                        request.end();
+                    }
                 }
             });
         } else {

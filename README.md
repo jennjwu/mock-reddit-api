@@ -13,11 +13,11 @@ restful service project
 1. Visit `localhost:3000` to hit the server. Available endpoints are documented in the next section.
 
 ## Endpoints
-- create user: `POST /users`
-- login user: `POST /users/login`
-- get reddit data: `GET /reddit`
-- create favorite: `POST /favorites`
-- get user's favorites: `GET /favorites`
+- [create user](docs/register.md): `POST /users`
+- [login user](docs/login.md): `POST /users/login`
+- [get reddit data](docs/reddit.md): `GET /reddit`
+- [create favorite](docs/saveFavorite.md): `POST /favorites`
+- [get user's favorites](docs/getFavorites.md): `GET /favorites`
 
 ## Development
 Using [nodemon](https://www.npmjs.com/package/nodemon) to auto restart node app upon file changes:
